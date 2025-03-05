@@ -5,7 +5,7 @@ description = "Iteratively analyzes structural framing members for ponding condi
 authors = [
     {name = "matthew-upshaw",email = "matthew.upshaw02@gmail.com"}
 ]
-license = "MIT"
+license = "LICENSE"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

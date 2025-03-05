@@ -1,0 +1,34 @@
+END-USER LICENSE AGREEMENT (EULA)
+1. Introduction
+This End-User License Agreement (“Agreement”) is a legal agreement between you
+(“User”) and Matthew Upshaw (“Licensor”) for the use of the software PondSys
+(“Software”).
+
+By downloading, installing, or using this Software, you acknowledge that you
+have read, understood, and agree to be bound by the terms of this Agreement. 
+If you do not agree, you must not use the Software.
+
+2. License Grant
+The Licensor grants the User a non-exclusive, non-transferable, revocable 
+license to use the Software for evaluation purposes only.
+
+3. Restrictions
+You may not:
+
+Distribute, sublicense, sell, or modify the Software.
+Reverse-engineer, decompile, or attempt to extract the source code.
+Use the Software for commercial purposes without written permission.
+4. Ownership
+The Software remains the property of Matthew Upshaw. This Agreement does 
+not transfer any rights or ownership.
+
+5. No Warranty & Liability
+The Software is provided "as is" without warranties of any kind.
+The Licensor is not liable for any damages resulting from use.
+
+6. Termination
+This license is revocable at any time. If you breach this Agreement, you must 
+delete all copies of the Software.
+
+7. Governing Law
+This Agreement shall be governed by the laws of the United States.
