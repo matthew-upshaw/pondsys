@@ -5,13 +5,13 @@ from scipy.interpolate import LinearNDInterpolator
 directory_path = os.path.dirname(__file__)
 
 open_scupper = pd.read_csv(
-    os.path.join(directory_path, 'open_scupper.csv'),
+    os.path.join(directory_path, 'data/open_scupper.csv'),
 )
 closed_scupper = pd.read_csv(
-    os.path.join(directory_path, 'closed_scupper.csv'),
+    os.path.join(directory_path, 'data/closed_scupper.csv'),
 )
 circular_scupper = pd.read_csv(
-    os.path.join(directory_path, 'circular_scupper.csv'),
+    os.path.join(directory_path, 'data/circular_scupper.csv'),
 )
 
 os_interp = LinearNDInterpolator(
