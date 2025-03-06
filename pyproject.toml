@@ -1,6 +1,6 @@
 [project]
 name = "pondsys"
-version = "0.1.0"
+version = "0.1.0-beta"
 description = "Iteratively analyzes structural framing members for ponding conditions."
 authors = [
     {name = "matthew-upshaw",email = "matthew.upshaw02@gmail.com"}

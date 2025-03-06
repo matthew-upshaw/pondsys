@@ -110,14 +110,47 @@ class Beam:
         self.length = length
 
         self.beam_slope = 0.0
-        #self.dead_load = 0.0
         self.rain_depth = (0.0, 0.0)
-        self.section = ""
-        #self.snow_uni = 0.0
+        self.section = "W12X14"
+        self.section_properties = {}
         self.tributary_width = 0.0
         self.dist_loads = []
         self.point_loads = []
-        self.spring_constants = (1e12, 1e12)
+        self.supports = []
+        self.support_nodes = {}
+        self.reaction_envelope = {}
+        self.max_moment_envelope = {
+            'cases': {},
+            'asd': {},
+            'lrfd': {},
+        }
+        self.min_moment_envelope = {
+            'cases': {},
+            'asd': {},
+            'lrfd': {},
+        }
+        self.max_shear_envelope = {
+            'cases': {},
+            'asd': {},
+            'lrfd': {},
+        }
+        self.min_shear_envelope = {
+            'cases': {},
+            'asd': {},
+            'lrfd': {},
+        }
+        self.max_defl_envelope = {
+            'cases': {},
+            'asd': {},
+            'lrfd': {},
+        }
+        self.min_defl_envelope = {
+            'cases': {},
+            'asd': {},
+            'lrfd': {},
+        }
+        self.analysis_stats = {}
+        self.model = None
 
         self._segment_beam()
         self.ponded_depth_history = [{
@@ -179,6 +212,33 @@ class Beam:
         """
         self.stations = np.linspace(0, self.length, 101, endpoint=True)
         self.segments = np.column_stack((self.stations[:-1], self.stations[1:]))
+
+    def add_support(self, location, DX, DY, RZ):
+        """
+        Add a support to the beam.
+
+        Parameters
+        ----------
+        location : float
+            The location of the support from the left side of the beam in feet.
+        DX : bool
+            The spring constant in the x-direction in lb/ft.
+        DY : bool
+            The spring constant in the y-direction in lb/ft.
+        RZ : bool
+            The rotational spring constant in the z-direction in lb-ft/rad.
+        """
+        location = float(location)
+        DX = float(DX)
+        DY = float(DY)
+        RZ = float(RZ)
+        if location < 0:
+            raise ValueError("Location must be positive.")
+        if type(location) != float:
+            raise TypeError("Location must be a float.")
+        if type(DX) != float or type(DY) != float or type(RZ) != float:
+            raise TypeError("DX, DY, and RZ must be floats.")
+        self.supports.append([location, DX, DY, RZ])
 
     def add_or_update_beam_slope(self, beam_slope):
         """
@@ -381,7 +441,7 @@ class Beam:
                 'A' : sji.KCS_Series.designations[des].get_eq_area(),
             }
 
-    def def_spring_constants(self, spring_constants):
+    '''def def_spring_constants(self, spring_constants):
         """
         Define the spring constants for the beam.
 
@@ -399,7 +459,7 @@ class Beam:
             raise TypeError("Spring constants must be a tuple of floats.")
         if len(spring_constants) != 2:
             raise ValueError("Spring constants must be a tuple of length 2.")
-        self.spring_constants = spring_constants
+        self.spring_constants = spring_constants'''
 
     def create_model(self, ponding_load):
         """
@@ -434,6 +494,35 @@ class Beam:
         self.model.add_node('N1', 0.0, 0.0, 0.0)
         self.model.add_node('N2', self.length*12, 0.0, 0.0)
 
+        # Define the support nodes
+        if len(self.supports) == 0:
+            raise ValueError("No supports defined. Please define supports.")
+        for support in self.supports:
+            # First check to see if a node is already defined at the support
+            # location.
+            check = any(
+                np.isclose(
+                    np.array((
+                        node.X,
+                        node.Y,
+                        node.Z,
+                    )),
+                    np.array((
+                        support[0]*12,
+                        0.0,
+                        0.0,
+                    ))
+                ).all() for node in self.model.nodes.values()
+            )
+            if not check:
+                # If not, add the node
+                self.model.add_node(
+                    f'N{len(self.model.nodes)+1}',
+                    support[0]*12,
+                    0.0,
+                    0.0,
+                )
+
         # Define the member
         self.model.add_member(
             'M1',
@@ -443,14 +532,65 @@ class Beam:
             self.section.upper(),
         )
 
-        # Define the support conditions
+
+        '''# Define the support conditions
         # First, simply-supported everywhere except DY
         self.model.def_support('N1', True, False, True, False, False, False)
         self.model.def_support('N2', True, False, True, True, False, False)
 
         # Now, the springs in DY
         self.model.def_support_spring('N1', 'DY', self.spring_constants[0])
-        self.model.def_support_spring('N2', 'DY', self.spring_constants[1])
+        self.model.def_support_spring('N2', 'DY', self.spring_constants[1])'''
+
+        # Define the support conditions
+        for support in self.supports:
+            # Find the node at the support location
+            for node in self.model.nodes.values():
+                if np.isclose(
+                    np.array((
+                        node.X,
+                        node.Y,
+                        node.Z,
+                    )),
+                    np.array((
+                        support[0]*12,
+                        0.0,
+                        0.0,
+                    ))
+                ).all():
+                    self.support_nodes[node.name] = support[0]
+                    # Define the fixed degrees of freedom
+                    self.model.def_support(
+                        node.name,
+                        False,
+                        False,
+                        True,
+                        True,
+                        False,
+                        False,
+                    )
+                    # Define the spring constants
+                    # x-direction
+                    if not np.isclose(support[1], 0.0):
+                        self.model.def_support_spring(
+                            node.name,
+                            'DX',
+                            support[1]/12/1000,
+                        )
+                    # y-direction
+                    if not np.isclose(support[2], 0.0):
+                        self.model.def_support_spring(
+                            node.name,
+                            'DY',
+                            support[2]/12/1000,
+                        )
+                    # z-direction
+                    if not np.isclose(support[3], 0.0):
+                        self.model.def_support_spring(
+                            node.name,
+                            'RZ',
+                            support[3]*12/1000,
+                        )
 
         # Add the distributed loads to the model
         for dist_load in self.dist_loads:
@@ -566,19 +706,33 @@ class Beam:
 
             self.model.analyze()
 
-            self.deflection_history.append({
-                'rain': self.model.members['M1'].deflection_array(
+            rain_defl = []
+            snow_defl = []
+            x_0 = 0
+            for submember in self.model.members['M1'].sub_members.values():
+                # Rain
+                rain_x_sub, rain_defl_sub = submember.deflection_array(
                     Direction='dy',
-                    n_points=len(self.stations),
+                    n_points=len(self.stations[(self.stations*12 >= x_0) & (self.stations*12 <= x_0 + submember.L())]),
                     combo_name='1.0D+1.0R+1.0P',
-                    x_array=self.stations*12,
-                )[1],
-                'snow': self.model.members['M1'].deflection_array(
+                )
+                rain_x_sub = [x_0 + x for x in rain_x_sub]
+                rain_defl.extend(rain_defl_sub)
+                # Snow
+                snow_x_sub, snow_defl_sub = submember.deflection_array(
                     Direction='dy',
-                    n_points=len(self.stations),
+                    n_points=len(self.stations[(self.stations*12 >= x_0) & (self.stations*12 <= x_0 + submember.L())]),
                     combo_name='1.0D+1.0S+1.0P',
-                    x_array=self.stations*12,
-                )[1],
+                )
+                snow_x_sub = [x_0 + x for x in snow_x_sub]
+                snow_defl.extend(snow_defl_sub)
+                x_0 = submember.L()
+            rain_defl = np.array(rain_defl)
+            snow_defl = np.array(snow_defl)
+
+            self.deflection_history.append({
+                'rain': rain_defl,
+                'snow': snow_defl,
             })
                 
             self.ponded_depth_history.append({
@@ -620,10 +774,41 @@ class Beam:
 
             if iteration > 1:
                 if rel_err['rain'] < 0.0001 and rel_err['snow'] < 0.0001:
+                    for node, _ in self.support_nodes.items():
+                        self.reaction_envelope[node] = self.model.nodes[node].RxnFY
+
+                    for case, _ in load_cases.items():
+                        self.max_moment_envelope['cases'][case] = self.model.members['M1'].max_moment('Mz', case)
+                        self.min_moment_envelope['cases'][case] = self.model.members['M1'].min_moment('Mz', case)
+
+                        #self.max_shear_envelope['cases'][case] = -1*self.model.members['M1'].min_shear('Vy', case)
+                        #self.min_moment_envelope['cases'][case] = -1*self.model.members['M1'].max_shear('Vy', case)
+
+                        self.max_defl_envelope['cases'][case] = -1*self.model.members['M1'].min_deflection('dy', case)
+                        self.min_defl_envelope['cases'][case] = -1*self.model.members['M1'].max_deflection('dy', case)
+
+                    for combo, _ in load_combinations['asd'].items():
+                        self.max_moment_envelope['asd'][combo] = self.model.members['M1'].max_moment('Mz', combo)
+                        self.min_moment_envelope['asd'][combo] = self.model.members['M1'].min_moment('Mz', combo)
+
+                        #self.max_shear_envelope['asd'][combo] = -1*self.model.members['M1'].min_shear('Vy', combo)
+                        #self.min_moment_envelope['asd'][combo] = -1*self.model.members['M1'].max_shear('Vy', combo)
+
+                        self.max_defl_envelope['asd'][combo] = -1*self.model.members['M1'].min_deflection('dy', combo)
+                        self.min_defl_envelope['asd'][combo] = -1*self.model.members['M1'].max_deflection('dy', combo)
+
+                    for combo, _ in load_combinations['lrfd'].items():
+                        self.max_moment_envelope['lrfd'][combo] = self.model.members['M1'].max_moment('Mz', combo)
+                        self.min_moment_envelope['lrfd'][combo] = self.model.members['M1'].min_moment('Mz', combo)
+
+                        #self.max_shear_envelope['lrfd'][combo] = -1*self.model.members['M1'].min_shear('Vy', combo)
+                        #self.min_moment_envelope['lrfd'][combo] = -1*self.model.members['M1'].max_shear('Vy', combo)
+
+                        self.max_defl_envelope['lrfd'][combo] = -1*self.model.members['M1'].min_deflection('dy', combo)
+                        self.min_defl_envelope['lrfd'][combo] = -1*self.model.members['M1'].max_deflection('dy', combo)
                     break
                 elif iteration > 50:
                     raise RuntimeWarning("Convergence not reached after 50 iterations.")
-                    break
                 
         self.analysis_stats = {
             'iterations': iteration,
@@ -733,29 +918,34 @@ class Beam:
         if combo_type not in ['asd', 'lrfd']:
             raise ValueError("Invalid load combination type. Please enter 'asd' or 'lrfd'.")
         
+        plt.figure(figsize=(10,6))        
         # Collect and store the moment array for each load case
         factored_moment_arrays = {}
         min_factored_moment = ['None', 0]
         max_factored_moment = ['None', 0]
         for combo, _ in load_combinations[combo_type].items():
-            _, factored_moment_arrays[combo] = self.model.members['M1'].moment_array(
-                Direction='Mz',
-                n_points=len(self.stations),
-                combo_name=combo,
-                x_array=self.stations*12
-            )
+            x, M = [], []
+            # Iterate through each submember
+            x_0 = 0
+            for submember in self.model.members['M1'].sub_members.values():
+                x_submember, M_submember = submember.moment_array(
+                    Direction='Mz',
+                    n_points=len(self.stations),
+                    combo_name=combo,
+                )
+                x_submember = [x_0 + x for x in x_submember]
+                x.extend(x_submember)
+                M.extend(M_submember)
+                x_0 += submember.L()
+            x, factored_moment_arrays[combo] = np.array(x), np.array(M)
             if np.amax(factored_moment_arrays[combo]) > max_factored_moment[1]:
                 max_factored_moment = [combo, np.amax(factored_moment_arrays[combo])]
             if np.amin(factored_moment_arrays[combo]) < min_factored_moment[1]:
                 min_factored_moment = [combo, np.amin(factored_moment_arrays[combo])]
 
-        # Plot the envelope
-        plt.figure(figsize=(10,6))
-
-        for combo, cur_moment_array in factored_moment_arrays.items():
             plt.plot(
-                self.stations,
-                cur_moment_array/12,
+                x/12,
+                factored_moment_arrays[combo]/12,
                 label=combo,
             )
         
@@ -802,29 +992,34 @@ class Beam:
         if combo_type not in ['asd', 'lrfd']:
             raise ValueError("Invalid load combination type. Please enter 'asd' or 'lrfd'.")
         
+        plt.figure(figsize=(10,6))        
         # Collect and store the moment array for each load case
         factored_shear_arrays = {}
         min_factored_shear = ['None', 0]
         max_factored_shear = ['None', 0]
         for combo, _ in load_combinations[combo_type].items():
-            _, factored_shear_arrays[combo] = -1*self.model.members['M1'].shear_array(
-                Direction='Fy',
-                n_points=len(self.stations),
-                combo_name=combo,
-                x_array=self.stations*12
-            )
+            x, S = [], []
+            # Iterate through each submember
+            x_0 = 0
+            for submember in self.model.members['M1'].sub_members.values():
+                x_submember, S_submember = submember.shear_array(
+                    Direction='Fy',
+                    n_points=len(self.stations),
+                    combo_name=combo,
+                )
+                x_submember = [x_0 + x for x in x_submember]
+                x.extend(x_submember)
+                S.extend(S_submember)
+                x_0 += submember.L()
+            x, factored_shear_arrays[combo] = np.array(x), -1*np.array(S)
             if np.amax(factored_shear_arrays[combo]) > max_factored_shear[1]:
                 max_factored_shear = [combo, np.amax(factored_shear_arrays[combo])]
             if np.amin(factored_shear_arrays[combo]) < min_factored_shear[1]:
                 min_factored_shear = [combo, np.amin(factored_shear_arrays[combo])]
 
-        # Plot the envelope
-        plt.figure(figsize=(10,6))
-
-        for combo, cur_shear_array in factored_shear_arrays.items():
             plt.plot(
-                self.stations,
-                cur_shear_array,
+                x/12,
+                factored_shear_arrays[combo],
                 label=combo,
             )
         
