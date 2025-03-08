@@ -1,3 +1,7 @@
+# pondsys.rain_calcs.dh_calcs.py
+# Copyright (c) 2025 Matthew Upshaw
+# See LICENSE file in project root for full license information.
+
 import os
 import pandas as pd
 from scipy.interpolate import LinearNDInterpolator

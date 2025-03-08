@@ -1,3 +1,7 @@
+# pondsys.beam.beam.py
+# Copyright (c) 2025 Matthew Upshaw
+# See LICENSE file in project root for full license information.
+
 from joistpy import sji
 from steelpy import aisc
 from Pynite import FEModel3D
@@ -106,14 +110,30 @@ class Beam:
         Add a section to the beam.
     """
 
-    def __init__(self, length):
+    def __init__(self, length, name="PondSys Beam"):
         self.length = length
+        self.name = name
 
-        self.beam_slope = 0.0
-        self.rain_depth = (0.0, 0.0)
-        self.section = "W12X14"
-        self.section_properties = {}
-        self.tributary_width = 0.0
+        self._segment_beam()
+        self.ponded_depth_history = [{
+            'rain': np.zeros(
+            len(self.stations)),
+            'snow': np.zeros(
+            len(self.stations))}]
+        self.deflection_history = [{
+            'rain': np.zeros((
+            1,
+            len(self.stations),
+        )),
+            'snow': np.zeros((
+            1,
+            len(self.stations),
+        ))}]
+        self.station_elevations = np.zeros(len(self.stations))
+        self.add_or_update_beam_slope(0.0)
+        self.add_or_update_rain_load((0.0, 0.0), auto_add_dist_load=False)
+        self.add_or_update_section("W12X14")
+        self.add_or_update_tributary_width(0.0)
         self.dist_loads = []
         self.point_loads = []
         self.supports = []
@@ -151,67 +171,8 @@ class Beam:
         }
         self.analysis_stats = {}
         self.model = None
-
-        self._segment_beam()
-        self.ponded_depth_history = [{
-            'rain': np.zeros(
-            len(self.stations)),
-            'snow': np.zeros(
-            len(self.stations))}]
-        
-        self.deflection_history = [{
-            'rain': np.zeros((
-            1,
-            len(self.stations),
-        )),
-            'snow': np.zeros((
-            1,
-            len(self.stations),
-        ))}]
-
-    def _calc_initial_rain_depth(self):
-        """
-        Calculate the rain depth at each segment of the beam.
-        """
-        self.ponded_depth_history[0] = np.where(
-            self.station_elevations <= sum(self.rain_depth),
-            sum(self.rain_depth) - self.station_elevations,
-            0.0
-        )
-
-    def _calc_ponding_load(self, ponded_depths):
-        """
-        Calculate the ponding load at each segment of the beam.
-
-        Parameters
-        ----------
-        ponded_depths : numpy.ndarray
-            The ponded depth at each segment of the beam, due to rain and snow
-            load.
-        """
-        ponding_load = {
-            'rain': np.column_stack((
-                self.stations[:-1],
-                5.2*ponded_depths['rain'][:-1],
-                self.stations[1:],
-                5.2*ponded_depths['rain'][1:],
-            )),
-            'snow': np.column_stack((
-                self.stations[:-1],
-                5.2*ponded_depths['snow'][:-1],
-                self.stations[1:],
-                5.2*ponded_depths['snow'][1:],
-            )),
-        }
-
-        return ponding_load
-
-    def _segment_beam(self):
-        """
-        Segment the beam into 100 equal segments.
-        """
-        self.stations = np.linspace(0, self.length, 101, endpoint=True)
-        self.segments = np.column_stack((self.stations[:-1], self.stations[1:]))
+        self.valid_results = False
+        self.analysis_ready = False
 
     def add_support(self, location, DX, DY, RZ):
         """
@@ -240,6 +201,28 @@ class Beam:
             raise TypeError("DX, DY, and RZ must be floats.")
         self.supports.append([location, DX, DY, RZ])
 
+        self.valid_results = False
+
+    def delete_support(self, index):
+        """
+        Delete a support from the beam.
+
+        Parameters
+        ----------
+        index : int
+            The index of the support to delete.
+        """
+        if index < 0 or index >= len(self.supports):
+            raise ValueError("Invalid index.")
+        self.valid_results = False
+        return self.supports.pop(index)
+
+    def list_supports(self):
+        """
+        List the supports of the beam.
+        """
+        return self.supports
+
     def add_or_update_beam_slope(self, beam_slope):
         """
         Add a beam slope to the beam.
@@ -256,6 +239,8 @@ class Beam:
             raise TypeError("Beam slope must be a float.")
         self.beam_slope = beam_slope
         self.station_elevations = self.stations * self.beam_slope
+
+        self.valid_results = False
 
     def add_dist_load(self, start, stop, start_load, stop_load, case):
         """
@@ -279,7 +264,9 @@ class Beam:
         start_load = float(start_load)
         stop_load = float(stop_load)
         if start < 0 or stop < 0:
-            raise ValueError("Start and stop must be positive.")
+            raise ValueError("Start and stop locations must be positive.")
+        if start > self.length or stop > self.length:
+            raise ValueError("Start and stop locations must be less or equal to the length of the beam.")
         if type(start) != float or type(stop) != float:
             raise TypeError("Start and stop must be floats.")
         if type(start_load) != float or type(stop_load) != float:
@@ -287,6 +274,43 @@ class Beam:
         if case not in ['D', 'Lr', 'R', 'S']:
             raise ValueError("Case must be one of dead (D), roof live (Lr), rain (R), or snow (S).")
         self.dist_loads.append([start, stop, start_load, stop_load, case])
+
+        self.valid_results = False
+
+    def delete_dist_load(self, index):
+        """
+        Delete a distributed load from the beam.
+
+        Parameters
+        ----------
+        index : int
+            The index of the distributed load to delete.
+        """
+        if index < 0 or index >= len(self.dist_loads):
+            raise ValueError("Invalid index.")
+        self.valid_results = False
+        return self.dist_loads.pop(index)
+    
+    def list_dist_loads(self):
+        """
+        List the distributed loads on the beam.
+        """
+        return self.dist_loads
+    
+    def clear_dist_loads(self, case):
+        """
+        Clear the distributed loads of a given case.
+
+        Parameters
+        ----------
+        case : str
+            The case of the distributed load to clear.
+        """
+        if case not in ['D', 'Lr', 'R', 'S']:
+            raise ValueError("Case must be one of dead (D), roof live (Lr), rain (R), or snow (S).")
+        self.dist_loads = [i for i in self.dist_loads if i[4] != case]
+
+        self.valid_results = False
 
     def add_point_load(self, location, load, case):
         """
@@ -305,6 +329,8 @@ class Beam:
         load = float(load)
         if location < 0:
             raise ValueError("Location must be positive.")
+        if location > self.length:
+            raise ValueError("Location must be less or equal to the length of the beam.")
         if type(location) != float:
             raise TypeError("Location must be a float.")
         if type(load) != float:
@@ -312,19 +338,28 @@ class Beam:
         if case not in ['D', 'Lr', 'R', 'S']:
             raise ValueError("Case must be one of dead (D), roof live (Lr), rain (R), or snow (S).")
         self.point_loads.append([location, load, case])
-    
-    def clear_dist_loads(self, case):
+
+        self.valid_results = False
+
+    def delete_point_load(self, index):
         """
-        Clear the distributed loads of a given case.
+        Delete a point load from the beam.
 
         Parameters
         ----------
-        case : str
-            The case of the distributed load to clear.
+        index : int
+            The index of the point load to delete.
         """
-        if case not in ['D', 'Lr', 'R', 'S']:
-            raise ValueError("Case must be one of dead (D), roof live (Lr), rain (R), or snow (S).")
-        self.dist_loads = [i for i in self.dist_loads if i[4] != case]
+        if index < 0 or index >= len(self.point_loads):
+            raise ValueError("Invalid index.")
+        self.valid_results = False
+        return self.point_loads.pop(index)
+    
+    def list_point_loads(self):
+        """
+        List the point loads on the beam.
+        """
+        return self.point_loads
     
     def clear_point_loads(self, case):
         """
@@ -338,6 +373,8 @@ class Beam:
         if case not in ['D', 'Lr', 'R', 'S']:
             raise ValueError("Case must be one of dead (D), roof live (Lr), rain (R), or snow (S).")
         self.point_loads = [i for i in self.point_loads if i[2] != case]
+
+        self.valid_results = False
 
     def add_or_update_rain_load(self, rain_depth, auto_add_dist_load=True):
         """
@@ -359,7 +396,7 @@ class Beam:
             raise ValueError("Rain depth must be a tuple of length 2.")
         self.rain_depth = rain_depth
         
-        if sum(self.rain_depth)/self.beam_slope <= self.length:
+        if divide_by_zero(sum(self.rain_depth), self.beam_slope) <= self.length:
             rain_load_limit = sum(self.rain_depth)/self.beam_slope
         else:
             rain_load_limit = self.length
@@ -377,6 +414,8 @@ class Beam:
                 rain_load_end*self.tributary_width,
                 'R',
             )
+        
+        self.valid_results = False
 
     def add_or_update_tributary_width(self, tributary_width):
         """
@@ -393,6 +432,8 @@ class Beam:
         if type(tributary_width) != float:
             raise TypeError("Tributary width must be a float.")
         self.tributary_width = tributary_width
+
+        self.valid_results = False
 
     def add_or_update_section(self, section):
         """
@@ -441,25 +482,7 @@ class Beam:
                 'A' : sji.KCS_Series.designations[des].get_eq_area(),
             }
 
-    '''def def_spring_constants(self, spring_constants):
-        """
-        Define the spring constants for the beam.
-
-        Parameters
-        ----------
-        spring_constants : tuple
-            The spring constants in kips/inch at each end of the beam.
-        """
-        spring_constants = tuple([float(i) for i in spring_constants])
-        if any([i < 0 for i in spring_constants]):
-            raise ValueError("Spring constants must be positive.")
-        if type(spring_constants) != tuple:
-            raise TypeError("Spring constants must be a tuple.")
-        if any([type(i) != float for i in spring_constants]):
-            raise TypeError("Spring constants must be a tuple of floats.")
-        if len(spring_constants) != 2:
-            raise ValueError("Spring constants must be a tuple of length 2.")
-        self.spring_constants = spring_constants'''
+        self.valid_results = False
 
     def create_model(self, ponding_load):
         """
@@ -543,6 +566,7 @@ class Beam:
         self.model.def_support_spring('N2', 'DY', self.spring_constants[1])'''
 
         # Define the support conditions
+        self.support_nodes = {}
         for support in self.supports:
             # Find the node at the support location
             for node in self.model.nodes.values():
@@ -774,6 +798,8 @@ class Beam:
 
             if iteration > 1:
                 if rel_err['rain'] < 0.0001 and rel_err['snow'] < 0.0001:
+                    self.valid_results = True
+
                     for node, _ in self.support_nodes.items():
                         self.reaction_envelope[node] = self.model.nodes[node].RxnFY
 
@@ -808,13 +834,39 @@ class Beam:
                         self.min_defl_envelope['lrfd'][combo] = -1*self.model.members['M1'].max_deflection('dy', combo)
                     break
                 elif iteration > 50:
-                    raise RuntimeWarning("Convergence not reached after 50 iterations.")
+                    raise RuntimeWarning("Convergence not reached after 50 iterations. Try a stiffer secction cross-section.")
                 
         self.analysis_stats = {
             'iterations': iteration,
             'ponded_area': ponded_area_stats,
             'rel_err': rel_err_stats,
         }
+
+    def reaction_envelope_at_node(self, node, combo_type='asd'):
+        """
+        Return the reaction envelope for a given node.
+
+        Parameters
+        ----------
+        node : str
+            The name of the node.
+        combo_type : str
+            The load combination type, either 'asd' or 'lrfd'.
+        """
+        if combo_type not in ['asd', 'lrfd']:
+            raise ValueError("Invalid load combination type. Please enter 'asd' or 'lrfd'.")
+        if node not in self.support_nodes.keys():
+            raise ValueError("Invalid node. Please enter a valid support node name.")
+        
+        selected_combos = load_combinations[combo_type].keys()
+        
+        selected_reaction_envelope = {}
+
+        for combo, value in self.reaction_envelope[node].items():
+            if combo in selected_combos:
+                selected_reaction_envelope[combo] = value
+        
+        return selected_reaction_envelope
 
     def plot_ponded_depth_history(self, iteration, load_type):
         """
@@ -1052,4 +1104,48 @@ class Beam:
         plt.grid(True)
 
         plt.show()
+
+    def _calc_initial_rain_depth(self):
+        """
+        Calculate the rain depth at each segment of the beam.
+        """
+        self.ponded_depth_history[0] = np.where(
+            self.station_elevations <= sum(self.rain_depth),
+            sum(self.rain_depth) - self.station_elevations,
+            0.0
+        )
+
+    def _calc_ponding_load(self, ponded_depths):
+        """
+        Calculate the ponding load at each segment of the beam.
+
+        Parameters
+        ----------
+        ponded_depths : numpy.ndarray
+            The ponded depth at each segment of the beam, due to rain and snow
+            load.
+        """
+        ponding_load = {
+            'rain': np.column_stack((
+                self.stations[:-1],
+                5.2*ponded_depths['rain'][:-1],
+                self.stations[1:],
+                5.2*ponded_depths['rain'][1:],
+            )),
+            'snow': np.column_stack((
+                self.stations[:-1],
+                5.2*ponded_depths['snow'][:-1],
+                self.stations[1:],
+                5.2*ponded_depths['snow'][1:],
+            )),
+        }
+
+        return ponding_load
+
+    def _segment_beam(self):
+        """
+        Segment the beam into 100 equal segments.
+        """
+        self.stations = np.linspace(0, self.length, 101, endpoint=True)
+        self.segments = np.column_stack((self.stations[:-1], self.stations[1:]))
         
