@@ -2,15 +2,20 @@
 # Copyright (c) 2025 Matthew Upshaw
 # See LICENSE file in project root for full license information.
 
+import logging
 import questionary
 
+from pondsys.cli.menus.file_management_menu import file_management_menu
 from pondsys.cli.menus.supports_menu import supports_menu
 from pondsys.cli.menus.beam_def_menu import beam_def_menu
 from pondsys.cli.menus.loading_menu import loading_menu
 from pondsys.cli.menus.analysis_results_menu import analysis_results_menu
+from pondsys.persistence.model_storage import save_model
 
 from pondsys.utils.styler import TextStyler
 from pondsys.beam.beam import Beam
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 def main_menu():
     """
@@ -23,7 +28,7 @@ def main_menu():
         main_choice = questionary.select(
             "Main Menu",
             choices=[
-                "Create Model",
+                "File",
                 "Beam Definition",
                 "Supports",
                 "Loading",
@@ -36,22 +41,25 @@ def main_menu():
 
         # Exiting the program
         if main_choice == "Exit":
-            print("Exiting PondSys...")
-            break
+            if beam is not None and beam.is_modified:
+                save_choice = questionary.confirm(
+                    "You have unsaved changes. Do you want to save before exiting?"
+                ).ask()
+
+                if bool(save_choice):
+                    save_model(beam)
+                    logging.info("Exiting PondSys...")
+                    break                    
+                else:
+                    logging.info("Exiting PondSys without saving changes...")
+                    break
+            else:
+                logging.info("Exiting PondSys...")
+                break
 
         # Creating a beam class
-        elif main_choice == "Create Model":
-            name = questionary.text(
-                "Description:"
-            ).ask()
-            length = questionary.text(
-                "Length of beam (ft):"
-            ).ask()
-            try:
-                beam = Beam(float(length), name)
-                print(f"Created {name} with beam of length {length} ft.")
-            except Exception as e:
-                print('Error creating beam:', e)
+        elif main_choice == "File":
+            beam = file_management_menu(beam)
 
         # Submenu for beam definition
         elif main_choice == "Beam Definition":

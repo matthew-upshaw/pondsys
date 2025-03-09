@@ -173,6 +173,7 @@ class Beam:
         self.model = None
         self.valid_results = False
         self.analysis_ready = False
+        self.is_modified = True
 
     def add_support(self, location, DX, DY, RZ):
         """
@@ -202,6 +203,7 @@ class Beam:
         self.supports.append([location, DX, DY, RZ])
 
         self.valid_results = False
+        self.is_modified = True
 
     def delete_support(self, index):
         """
@@ -215,6 +217,7 @@ class Beam:
         if index < 0 or index >= len(self.supports):
             raise ValueError("Invalid index.")
         self.valid_results = False
+        self.is_modified = True
         return self.supports.pop(index)
 
     def list_supports(self):
@@ -241,6 +244,7 @@ class Beam:
         self.station_elevations = self.stations * self.beam_slope
 
         self.valid_results = False
+        self.is_modified = True
 
     def add_dist_load(self, start, stop, start_load, stop_load, case):
         """
@@ -276,6 +280,7 @@ class Beam:
         self.dist_loads.append([start, stop, start_load, stop_load, case])
 
         self.valid_results = False
+        self.is_modified = True
 
     def delete_dist_load(self, index):
         """
@@ -289,6 +294,7 @@ class Beam:
         if index < 0 or index >= len(self.dist_loads):
             raise ValueError("Invalid index.")
         self.valid_results = False
+        self.is_modified = True
         return self.dist_loads.pop(index)
     
     def list_dist_loads(self):
@@ -311,6 +317,7 @@ class Beam:
         self.dist_loads = [i for i in self.dist_loads if i[4] != case]
 
         self.valid_results = False
+        self.is_modified = True
 
     def add_point_load(self, location, load, case):
         """
@@ -340,6 +347,7 @@ class Beam:
         self.point_loads.append([location, load, case])
 
         self.valid_results = False
+        self.is_modified = True
 
     def delete_point_load(self, index):
         """
@@ -353,6 +361,7 @@ class Beam:
         if index < 0 or index >= len(self.point_loads):
             raise ValueError("Invalid index.")
         self.valid_results = False
+        self.is_modified = True
         return self.point_loads.pop(index)
     
     def list_point_loads(self):
@@ -375,6 +384,7 @@ class Beam:
         self.point_loads = [i for i in self.point_loads if i[2] != case]
 
         self.valid_results = False
+        self.is_modified = True
 
     def add_or_update_rain_load(self, rain_depth, auto_add_dist_load=True):
         """
@@ -416,6 +426,7 @@ class Beam:
             )
         
         self.valid_results = False
+        self.is_modified = True
 
     def add_or_update_tributary_width(self, tributary_width):
         """
@@ -434,6 +445,7 @@ class Beam:
         self.tributary_width = tributary_width
 
         self.valid_results = False
+        self.is_modified = True
 
     def add_or_update_section(self, section):
         """
@@ -483,6 +495,7 @@ class Beam:
             }
 
         self.valid_results = False
+        self.is_modified = True
 
     def create_model(self, ponding_load):
         """
