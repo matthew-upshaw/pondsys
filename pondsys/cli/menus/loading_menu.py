@@ -61,7 +61,7 @@ def loading_menu(beam):
                 elif bool(auto_add) & (beam.tributary_width == 0):
                     logger.warning("Tributary width must be greater than 0 to automatically add rain load.")
             except Exception as e:
-                logger.error('Error assigning impounded water depth:', e)
+                logger.error(f"Error assigning impounded water depth: {e}")
 
         # Point Loads Menu
         elif action == "Point Loads":

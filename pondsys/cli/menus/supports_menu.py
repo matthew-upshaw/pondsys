@@ -50,9 +50,9 @@ def supports_menu(beam):
                     float(spring_constant_TY),
                     float(spring_constant_RZ),
                 )
-                print(f'Added support at {position} ft.')
+                logger.info(TextStyler.GREEN+f'Added support at {position} ft.'+TextStyler.RESET)
             except Exception as e:
-                print('Error adding support:', e)
+                logger.error(f"Error adding support: {e}")
 
         # Remove a support
         elif action == "Remove Support":

@@ -45,7 +45,7 @@ def file_management_menu(beam):
                 logger.info(TextStyler.GREEN+f"Created {name} with beam of length {length} ft."+TextStyler.RESET)
                 return beam
             except Exception as e:
-                logger.error('Error creating beam:', e)
+                logger.error(f"Error creating beam: {e}")
 
         # Saving the model
         elif file_choice == "Save Model":

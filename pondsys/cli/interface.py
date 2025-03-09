@@ -91,7 +91,7 @@ def main_menu():
                     beam.analyze_ponding()
                     logger.info(TextStyler.GREEN+f"Analysis complete. Convergence reached after {beam.analysis_stats['iterations']} iterations."+TextStyler.RESET)
                 except Exception as e:
-                    logger.error('Error analyzing model:', e)
+                    logger.error(f"Error analyzing model:, {e}")
 
         elif main_choice == "Analysis Results":
             if beam is None:

@@ -57,7 +57,7 @@ def line_loads_menu(beam):
                 )
                 logger.info(TextStyler.GREEN+f"Added {load_case} line load of ({start_magnitude}, {stop_magnitude}) lb/ft at ({start_position}, {stop_position}) ft."+TextStyler.RESET)
             except Exception as e:
-                logger.error('Error adding point load:', e)
+                logger.error(f"Error adding point load: {e}")
 
         # Delete line load
         elif action == "Delete Line Load":
@@ -81,17 +81,17 @@ def line_loads_menu(beam):
                     beam.clear_dist_loads(selected_case)
                     logger.info(TextStyler.GREEN+f"Cleared all point loads for load case {selected_case}."+TextStyler.RESET)
                 except Exception as e:
-                    logger.error('Error clearing point loads:', e)
+                    logger.error(f"Error clearing point loads: {e}")
             else:
                 try:
                     index = int(selection.split(':')[0])-1
                 except ValueError:
-                    logger.info("Invalid selection.")
+                    logger.error("Invalid selection.")
                 try:
                     beam.delete_dist_load(index)
                     logger.info(TextStyler.GREEN+f"Deleted point load {selection}."+TextStyler.RESET)
                 except Exception as e:
-                    logger.error('Error deleting point load:', e)
+                    logger.error(f"Error deleting point load: {e}")
 
         # List all point loads currently on the beam
         elif action == "List Line Loads":

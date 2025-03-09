@@ -35,7 +35,7 @@ def analysis_results_menu(beam, combinations):
             print(
                 TextStyler.BOLD+
                 "Reaction Envelope\n"+
-                "===========================================\n"+
+                "==========================================="+
                 TextStyler.RESET
             )
             for node, location in beam.support_nodes.items():
@@ -61,7 +61,7 @@ def analysis_results_menu(beam, combinations):
                 beam.plot_shear_envelope(combinations)
                 questionary.press_any_key_to_continue().ask()
             except Exception as e:
-                logger.error('Error plotting shear envelope:', e)
+                logger.error(f"Error plotting shear envelope: {e}")
 
         # Plotting the converged ponded depth
         elif action == "Plot Converged Ponded Depth":
@@ -80,5 +80,5 @@ def analysis_results_menu(beam, combinations):
                 )
                 questionary.press_any_key_to_continue().ask()
             except Exception as e:
-                logger.error('Error plotting converged ponded depth:', e)
+                logger.error(f"Error plotting converged ponded depth: {e}")
 

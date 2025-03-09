@@ -39,7 +39,7 @@ def beam_def_menu(beam):
                 beam.length = float(length)
                 logger.info(TextStyler.GREEN+f"Assigned beam length of {length} ft."+TextStyler.RESET)
             except Exception as e:
-                logger.error('Error assigning beam length:', e)
+                logger.error(f"Error assigning beam length: {e}")
 
         # Assign beam section
         elif action == "Assign Beam Section":
@@ -50,7 +50,7 @@ def beam_def_menu(beam):
                 beam.add_or_update_section(section.upper())
                 logger.info(TextStyler.GREEN+f"Assigned size {section.upper()} to beam."+TextStyler.RESET)
             except Exception as e:
-                logger.error('Error assigning beam section:', e)
+                logger.error(f"Error assigning beam section: {e}")
 
         # Assign beam slope
         elif action == "Assign Beam Slope":
@@ -61,7 +61,7 @@ def beam_def_menu(beam):
                 beam.add_or_update_beam_slope(float(slope))
                 logger.info(TextStyler.GREEN+f"Assigned slope of {slope} in/ft to beam."+TextStyler.RESET)
             except Exception as e:
-                logger.error('Error assigning beam slope:', e)
+                logger.error(f"Error assigning beam slope: {e}")
 
         elif action == "Assign Tributary Width":
             width = questionary.text(
@@ -71,4 +71,4 @@ def beam_def_menu(beam):
                 beam.add_or_update_tributary_width(float(width))
                 logger.info(TextStyler.GREEN+f"Assigned tributary width of {width} ft."+TextStyler.RESET)
             except Exception as e:
-                logger.error('Error assigning tributary width:', e)
+                logger.error(f"Error assigning tributary width: {e}")
