@@ -4,6 +4,8 @@
 
 import questionary
 
+from pondsys.utils.logging_config import logger
+
 load_case_abbr = {
     "Dead Load": "D",
     "Roof Live Load": "Lr",

@@ -6,6 +6,9 @@ import questionary
 
 from pondsys.cli.menus.load_cases_menu import load_case_choice
 
+from pondsys.utils.styler import TextStyler
+from pondsys.utils.logging_config import logger
+
 from pondsys.beam.beam import Beam
 
 def line_loads_menu(beam):
@@ -52,15 +55,15 @@ def line_loads_menu(beam):
                     float(stop_magnitude),
                     load_case
                 )
-                print(f"Added {load_case} line load of ({start_magnitude}, {stop_magnitude}) lb/ft at ({start_position}, {stop_position}) ft.")
+                logger.info(TextStyler.GREEN+f"Added {load_case} line load of ({start_magnitude}, {stop_magnitude}) lb/ft at ({start_position}, {stop_position}) ft."+TextStyler.RESET)
             except Exception as e:
-                print('Error adding point load:', e)
+                logger.error('Error adding point load:', e)
 
         # Delete line load
         elif action == "Delete Line Load":
             line_loads = beam.list_dist_loads()
             if not line_loads:
-                print("No line loads to delete.")
+                logger.info("No line loads to delete.")
                 continue
             choices = [f"{i+1}: {ll}" for i, ll in enumerate(line_loads)]
             choices.append("Clear All")
@@ -76,25 +79,25 @@ def line_loads_menu(beam):
                 selected_case = load_case_choice()
                 try:
                     beam.clear_dist_loads(selected_case)
-                    print(f"Cleared all point loads for load case {selected_case}.")
+                    logger.info(TextStyler.GREEN+f"Cleared all point loads for load case {selected_case}."+TextStyler.RESET)
                 except Exception as e:
-                    print('Error clearing point loads:', e)
+                    logger.error('Error clearing point loads:', e)
             else:
                 try:
                     index = int(selection.split(':')[0])-1
                 except ValueError:
-                    print("Invalid selection.")
+                    logger.info("Invalid selection.")
                 try:
                     beam.delete_dist_load(index)
-                    print(f"Deleted point load {selection}.")
+                    logger.info(TextStyler.GREEN+f"Deleted point load {selection}."+TextStyler.RESET)
                 except Exception as e:
-                    print('Error deleting point load:', e)
+                    logger.error('Error deleting point load:', e)
 
         # List all point loads currently on the beam
         elif action == "List Line Loads":
             line_loads = beam.list_dist_loads()
             if not line_loads:
-                print("No line loads to list.")
+                logger.info("No line loads to list.")
                 continue
             else:
                 print("Current line loads:")

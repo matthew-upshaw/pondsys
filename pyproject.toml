@@ -7,7 +7,7 @@ authors = [
 ]
 license = "LICENSE"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10, <4.0"
 dependencies = [
     "joistpy (==1.1.0)",
     "matplotlib (==3.10.1)",
@@ -16,12 +16,11 @@ dependencies = [
     "pyvista (==0.44.2)",
     "questionary (==2.1.0)",
     "scipy (==1.15.2)",
-    "steelpy (==1.1.1)"
+    "steelpy (==1.1.1)",
 ]
 
-[tool.poetry.package.exclude]
-"venv/*"
-"notebooks/*"
+[tool.poetry.scripts]
+pondsys = "pondsys.cli.interface:main_menu"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

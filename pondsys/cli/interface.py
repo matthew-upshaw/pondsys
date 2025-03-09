@@ -2,7 +2,6 @@
 # Copyright (c) 2025 Matthew Upshaw
 # See LICENSE file in project root for full license information.
 
-import logging
 import questionary
 
 from pondsys.cli.menus.file_management_menu import file_management_menu
@@ -13,16 +12,17 @@ from pondsys.cli.menus.analysis_results_menu import analysis_results_menu
 from pondsys.persistence.model_storage import save_model
 
 from pondsys.utils.styler import TextStyler
-from pondsys.beam.beam import Beam
+from pondsys.utils.logging_config import logger
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+from pondsys.beam.beam import Beam
 
 def main_menu():
     """
     The main interactive CLI menu.
     """
     beam = None
-    print('PondSys v0.1.0-beta')
+    print(TextStyler.BOLD+TextStyler.CYAN+'PondSys v0.1.0-beta'+TextStyler.RESET)
+    print(TextStyler.BOLD+TextStyler.CYAN+'A Ponding Analysis Tool'+TextStyler.RESET)
 
     while True:
         main_choice = questionary.select(
@@ -48,13 +48,13 @@ def main_menu():
 
                 if bool(save_choice):
                     save_model(beam)
-                    logging.info("Exiting PondSys...")
+                    logger.info("Exiting PondSys...")
                     break                    
                 else:
-                    logging.info("Exiting PondSys without saving changes...")
+                    logger.info("Exiting PondSys without saving changes...")
                     break
             else:
-                logging.info("Exiting PondSys...")
+                logger.info("Exiting PondSys...")
                 break
 
         # Creating a beam class
@@ -64,38 +64,38 @@ def main_menu():
         # Submenu for beam definition
         elif main_choice == "Beam Definition":
             if beam is None:
-                print("No beam created. Please create a beam first.")
+                logger.warning("No beam created. Please create a beam first.")
             else:
                 beam_def_menu(beam)
         
         # Submenu for managing supports
         elif main_choice == "Supports":
             if beam is None:
-                print("No beam created. Please create a beam first.")
+                logger.warning("No beam created. Please create a beam first.")
             else:
                 supports_menu(beam)
 
         # Submenu for managing loading on the beam
         elif main_choice == "Loading":
             if beam is None:
-                print("No beam created. Please create a beam first.")
+                logger.warning("No beam created. Please create a beam first.")
             else:
                 loading_menu(beam)
         
         # Submenu for managing analysis of the beam and analysis results
         elif main_choice == "Perform Analysis":
             if beam is None:
-                print("No beam created. Please create a beam first.")
+                logger.warning("No beam created. Please create a beam first.")
             else:
                 try:
                     beam.analyze_ponding()
-                    print(f"Analysis complete. Convergence reached after {beam.analysis_stats['iterations']} iterations.")
+                    logger.info(TextStyler.GREEN+f"Analysis complete. Convergence reached after {beam.analysis_stats['iterations']} iterations."+TextStyler.RESET)
                 except Exception as e:
-                    print('Error analyzing model:', e)
+                    logger.error('Error analyzing model:', e)
 
         elif main_choice == "Analysis Results":
             if beam is None:
-                print("No beam created. Please create a beam first.")
+                logger.warning("No beam created. Please create a beam first.")
             else:
                 if beam.valid_results:
                     combinations = questionary.select(
@@ -108,7 +108,7 @@ def main_menu():
                     ).ask()
                     analysis_results_menu(beam, combinations.lower())
                 else:
-                    print("No valid analysis results to display.")
+                    logger.warning("No valid analysis results to display.")
 
 if __name__ == "__main__":
     main_menu()

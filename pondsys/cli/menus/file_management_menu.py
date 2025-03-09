@@ -6,6 +6,9 @@ import questionary
 
 from pondsys.persistence.model_storage import save_model, load_model
 
+from pondsys.utils.styler import TextStyler
+from pondsys.utils.logging_config import logger
+
 from pondsys.beam.beam import Beam
 
 def file_management_menu(beam):
@@ -39,15 +42,15 @@ def file_management_menu(beam):
             ).ask()
             try:
                 beam = Beam(float(length), name)
-                print(f"Created {name} with beam of length {length} ft.")
+                logger.info(TextStyler.GREEN+f"Created {name} with beam of length {length} ft."+TextStyler.RESET)
                 return beam
             except Exception as e:
-                print('Error creating beam:', e)
+                logger.error('Error creating beam:', e)
 
         # Saving the model
         elif file_choice == "Save Model":
             if beam is None:
-                print("No beam created. Please create a beam first.")
+                logger.warning("No beam created. Please create a beam first.")
             else:
                 save_model(beam)
                 return beam
@@ -59,4 +62,4 @@ def file_management_menu(beam):
                 beam = loaded_beam
                 return beam
             else:
-                print("Failed to load beam.")
+                logger.warning("Failed to load beam.")

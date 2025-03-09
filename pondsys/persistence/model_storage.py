@@ -2,19 +2,19 @@
 # Copyright (c) 2025 Matthew Upshaw
 # See LICENSE file in project root for full license information.'
 
-import logging
 import os
 import pickle
 import tkinter as tk
 from tkinter import filedialog
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+from pondsys.utils.styler import TextStyler
+from pondsys.utils.logging_config import logger
 
 def save_model(model):
     """
     Prompts the user for a filename and saves the model to a file using pickle.
     """
-    logging.info("Saving model...")
+    logger.info("Saving model...")
 
     root = tk.Tk()
 
@@ -27,22 +27,22 @@ def save_model(model):
     root.destroy()
 
     if not file_path:
-        logging.info("No file selected. Model not saved.")
+        logger.warning("No file selected. Model not saved.")
         return
     
     try:
         with open(file_path, "wb") as f:
             pickle.dump(model, f)
-        logging.info(f"Model saved to {file_path}.")
+        logger.info(TextStyler.GREEN+f"Model saved to {file_path}."+TextStyler.RESET)
         model.is_modified = False
     except Exception as e:
-        logging.error(f"Error saving model to {file_path}: {e}")
+        logger.error(f"Error saving model to {file_path}: {e}")
 
 def load_model():
     """
     Prompts the user for a filename and loads the model from a file using pickle.
     """
-    logging.info("Loading model...")
+    logger.info("Loading model...")
 
     root = tk.Tk()
 
@@ -54,18 +54,18 @@ def load_model():
     root.destroy()
 
     if not file_path:
-        logging.warning("No file selected. Model not loaded.")
+        logger.warning("No file selected. Model not loaded.")
         return None
     
     if not os.path.exists(file_path):
-        logging.error(f"File {file_path} does not exist.")
+        logger.error(f"File {file_path} does not exist.")
         return None
     
     try:
         with open(file_path, "rb") as f:
             model = pickle.load(f)
-        logging.info(f"Model loaded from {file_path}.")
+        logger.info(TextStyler.GREEN+f"Model loaded from {file_path}."+TextStyler.RESET)
         return model
     except Exception as e:
-        logging.error(f"Error loading model from {file_path}: {e}")
+        logger.error(f"Error loading model from {file_path}: {e}")
         return None

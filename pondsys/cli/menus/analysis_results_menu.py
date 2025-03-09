@@ -4,6 +4,9 @@
 
 import questionary
 
+from pondsys.utils.styler import TextStyler
+from pondsys.utils.logging_config import logger
+
 from pondsys.beam.beam import Beam
 
 def analysis_results_menu(beam, combinations):
@@ -30,8 +33,10 @@ def analysis_results_menu(beam, combinations):
         # Show the reaction envelope
         elif action == "Reaction Envelope":
             print(
-                "Reaction Envelope\n"
-                "===========================================\n"
+                TextStyler.BOLD+
+                "Reaction Envelope\n"+
+                "===========================================\n"+
+                TextStyler.RESET
             )
             for node, location in beam.support_nodes.items():
                 current_envelope = beam.reaction_envelope_at_node(node, combinations)
@@ -48,7 +53,7 @@ def analysis_results_menu(beam, combinations):
                 beam.plot_moment_envelope(combinations)
                 questionary.press_any_key_to_continue().ask()
             except Exception as e:
-                print('Error plotting moment envelope:', e)
+                logger.error('Error plotting moment envelope:', e)
 
         # Plotting the shear envelope
         elif action == "Plot Shear Envelope":
@@ -56,7 +61,7 @@ def analysis_results_menu(beam, combinations):
                 beam.plot_shear_envelope(combinations)
                 questionary.press_any_key_to_continue().ask()
             except Exception as e:
-                print('Error plotting shear envelope:', e)
+                logger.error('Error plotting shear envelope:', e)
 
         # Plotting the converged ponded depth
         elif action == "Plot Converged Ponded Depth":
@@ -75,5 +80,5 @@ def analysis_results_menu(beam, combinations):
                 )
                 questionary.press_any_key_to_continue().ask()
             except Exception as e:
-                print('Error plotting converged ponded depth:', e)
+                logger.error('Error plotting converged ponded depth:', e)
 

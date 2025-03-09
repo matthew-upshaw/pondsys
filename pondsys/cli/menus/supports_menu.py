@@ -4,6 +4,9 @@
 
 import questionary
 
+from pondsys.utils.styler import TextStyler
+from pondsys.utils.logging_config import logger
+
 from pondsys.beam.beam import Beam
 
 def supports_menu(beam):
@@ -55,7 +58,7 @@ def supports_menu(beam):
         elif action == "Remove Support":
             supports = beam.list_supports()
             if not supports:
-                print("No supports to remove.")
+                logger.info("No supports to remove.")
                 continue
             choices = [f"{i+1}: {s}" for i, s in enumerate(supports)]
             choices.append("Cancel")
@@ -70,19 +73,19 @@ def supports_menu(beam):
                 try:
                     index = int(selection.split(":")[0])-1
                 except ValueError:
-                    print("Invalid selection.")
+                    logger.error("Invalid selection.")
                     continue
                 try:
                     removed = beam.delete_support(index)
-                    print(f'Removed support {removed}')
+                    logger.info(TextStyler.GREEN+f'Removed support {removed}'+TextStyler.RESET)
                 except IndexError as e:
-                    print(e)
+                    logger.error(e)
 
         # List all supports currently in project
         elif action == "List Supports":
             supports = beam.list_supports()
             if not supports:
-                print("No supports added.")
+                logger.info("No supports added.")
             else:
                 print("Current Supports:")
                 for i, s in enumerate(supports):
